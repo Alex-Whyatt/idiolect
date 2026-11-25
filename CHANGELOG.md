@@ -10,6 +10,7 @@ Pattern catalogue: the scanner now names which of 26 AI-default patterns a draft
 - **`selftest`** — every fixture "before" must hit its pattern and every "after" must not.
 - Short clipped sentences and the low-weight t3 words are kept out of the patterns: both fire often on ordinary human writing.
 - `THIRD-PARTY-NOTICES.md` carries humanizer's MIT notice.
+- **`self capture` skips harness-wrapped text** — a subagent hand-back, notification or paste that arrives as a user turn inside tags is no longer saved to the self corpus; words typed beside it still are (upstream issue 1).
 - **`conform` exclamations** — a voice with a non-zero `exclaims_per_100w` may use one exclamation mark in a draft; the per-100-word rate alone failed any short text.
 
 ## 0.2.0 — 2026-07-08

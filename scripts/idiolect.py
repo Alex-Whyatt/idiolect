@@ -1117,13 +1117,25 @@ def ledger_check(voice, structure, lookback=5):
 CODEY_RE = re.compile(r"[{}<>`$\\/=;|]")
 
 
+HARNESS_BLOCK_RE = re.compile(r"<([a-z][\w-]*)(?:\s[^>]*)?>.*?</\1>", re.S)
+HARNESS_OPEN_RE = re.compile(r"<[a-z][\w-]*(?:\s[^>]*)?>")
+
+
+def typed_text(text):
+    """What the user typed, without blocks a harness wrapped in tags (subagent hand-backs, notifications, pastes)."""
+    typed = HARNESS_BLOCK_RE.sub("", text).strip()
+    opened = HARNESS_OPEN_RE.search(typed)
+    return typed[:opened.start()].strip() if opened else typed
+
+
 def self_capturable(text):
-    t = text.strip()
+    t = typed_text(text)
+    wrapped = t != text.strip()
     if not t or t.startswith("/") or t.startswith("!"):
-        return False, "command"
+        return False, "harness" if wrapped else "command"
     w = words_of(t)
     if len(w) < SELF_MIN_WORDS:
-        return False, "too short"
+        return False, "harness" if wrapped else "too short"
     codey = len(CODEY_RE.findall(t))
     if codey / max(len(t), 1) > 0.03 or "```" in t:
         return False, "code-like"
@@ -1458,7 +1470,7 @@ def cmd_self(args):
             text = ""
         ok, why = self_capturable(text)
         if ok:
-            self_append(text, "prompt")
+            self_append(typed_text(text), "prompt")
         # hooks must be silent and always exit 0
         return
     if args.action == "add":
@@ -1803,6 +1815,18 @@ def cmd_selftest(_args):
         t("self: code-like rejected", not ok1)
         ok2, _ = self_capturable("honestly I think the report reads too formal, can we make the opening feel more like how I actually talk to customers when they walk in")
         t("self: prose accepted", ok2)
+        handback = ('<agent-message from="researcher">\nI checked the three call sites and only the second '
+                    'one passes the stale flag through, so the retry never fires there. The other two are '
+                    'fine as they are.\n</agent-message>')
+        ok3, why3 = self_capturable(handback)
+        t("self: harness hand-back rejected", not ok3 and why3 == "harness", why3)
+        ok4, why4 = self_capturable('<task-notification>\n' + "the build finished and every check passed " * 4)
+        t("self: unclosed harness block rejected", not ok4 and why4 == "harness", why4)
+        typed = ("ok that matches what I thought, can you now make the opening feel more like how I "
+                 "actually talk to customers when they walk in")
+        t("self: typed words beside a hand-back are accepted", self_capturable(typed + "\n" + handback)[0])
+        t("self: only the typed words are kept", typed_text(typed + "\n" + handback) == typed,
+          typed_text(typed + "\n" + handback))
         self_append("this is a sample of my writing that is long enough to matter for the corpus", "sample")
         t("self: corpus roundtrip", len(self_read()) == 1)
     (HOME, CUSTOM_VOICES_DIR, LEDGER_PATH, SELF_DIR, SELF_CORPUS, SELF_OFF_FLAG, LOCAL_TELLS) = old
