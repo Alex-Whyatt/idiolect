@@ -954,8 +954,11 @@ def conform_text(text, fm, platform=None):
     elif ed_policy == "rare":
         check("em_dash (rare)", "<=1", ed_count, ed_count <= 1)
     ex_target = float(sy["exclaims_per_100w"])
-    check("exclaims_per_100w", f"<={round(ex_target * 1.6 + 0.5, 2)}",
-          stats["exclaims_per_100w"], stats["exclaims_per_100w"] <= ex_target * 1.6 + 0.5)
+    ex_count = round(stats["exclaims_per_100w"] * stats["words"] / 100)
+    lone_exclaim = ex_target > 0 and ex_count <= 1
+    check("exclaims_per_100w", f"<={round(ex_target * 1.6 + 0.5, 2)} or one in the draft",
+          stats["exclaims_per_100w"],
+          lone_exclaim or stats["exclaims_per_100w"] <= ex_target * 1.6 + 0.5)
     caps = sy["caps"]
     if caps == "lowercase":
         check("caps (lowercase)", ">=60% lower starts",
@@ -1745,6 +1748,17 @@ def cmd_selftest(_args):
     t("patterns: two unrelated weak tells become actionable",
       len(paired["patterns"]) == 2 and all(p["actionable"] for p in paired["patterns"]),
       str(paired["patterns"]))
+
+    sparing = dict(fm_v, stylo=dict(fm_v["stylo"], caps="mixed", contractions="standard",
+                                    exclaims_per_100w=0.1))
+    one_bang = "ok that actually worked first time! merging now, will watch sentry for an hour"
+    t("conform: one exclamation passes a low but real rate",
+      conform_text(one_bang, sparing)["pass"], fmt_conform(conform_text(one_bang, sparing)))
+    t("conform: a second exclamation does not",
+      not conform_text(one_bang + " cheers!", sparing)["pass"])
+    never_exclaims = dict(sparing, stylo=dict(sparing["stylo"], exclaims_per_100w=0))
+    t("conform: a zero rate allows none in a short draft",
+      not conform_text(one_bang, never_exclaims)["pass"])
 
     tainted = HUMAN_SNIPPET + " let that sink in."
     t("conform: an actionable pattern fails the draft",
