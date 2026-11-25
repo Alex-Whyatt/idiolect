@@ -8,7 +8,8 @@ Pattern catalogue: the scanner now names which of 26 AI-default patterns a draft
 - **`scan` reports `patterns`** — each hit carries `actionable`: a strong pattern on one sighting, a weak one only beside an unrelated second pattern. The score is unchanged, so the bench calibration holds.
 - **`conform` fails on an actionable pattern** unless the profile's new optional `allow` list names it. The five shipped sample drafts still pass.
 - **`selftest`** — every fixture "before" must hit its pattern and every "after" must not.
-- Measured on 4105 human-written work comments: 1.3% carry an actionable pattern.
+- Short clipped sentences and the low-weight t3 words are kept out of the patterns: both fire often on ordinary human writing.
+- `THIRD-PARTY-NOTICES.md` carries humanizer's MIT notice.
 - **`conform` exclamations** — a voice with a non-zero `exclaims_per_100w` may use one exclamation mark in a draft; the per-100-word rate alone failed any short text.
 
 ## 0.2.0 — 2026-07-08
