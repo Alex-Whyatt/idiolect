@@ -56,6 +56,9 @@ never:                           # hard anti-patterns; `conform` greps for viola
   - hashtags
   - bullet lists
   - questions engineered for engagement
+allow: [dashes, forced_triads]   # optional: pattern ids from data/patterns.json this person uses on purpose;
+                                 # `conform` fails on any other actionable pattern. A stylo.em_dash other
+                                 # than never/rare allows `dashes` without listing it.
 ---
 ```
 

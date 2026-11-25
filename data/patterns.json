@@ -1,0 +1,696 @@
+{
+  "version": 1,
+  "note": "The 26 patterns of AI-default prose, as an index over the tells in tells.json plus single-sighting detectors of their own. Pattern hits are REPORTED and gate conform; they never change the scan score, so bench calibration is untouched. 'strength' follows the source: a strong pattern justifies an edit on one sighting, a weak one only alongside an unrelated second pattern. 'detect: judgement' patterns have no honest regex and belong to the skill prose. A voice profile's 'allow' list switches a pattern off for that person. A lexical phrase named in a pattern's 'tells' belongs to that pattern; every other lexical hit falls to the pattern whose 'kinds' names its tier. Calibration: short clipped sentences (staccato_drama) and the low-weight t3 words are left out of the patterns on purpose; on 4105 human-written work comments they were most of the false positives.",
+  "source": "Adapted from blader/humanizer v4.0.0 SKILL.md (MIT, https://github.com/blader/humanizer, commit a32f244), itself drawn from Wikipedia's 'Signs of AI writing'. Fixtures are that skill's before/after pairs.",
+  "patterns": [
+    {
+      "n": 1,
+      "id": "not_x_but_y",
+      "name": "Not X but Y",
+      "strength": "strong",
+      "detect": "regex",
+      "tells": [
+        "not_just_but",
+        "its_not_x_its_y",
+        "isnt_just_a",
+        "more_than_just",
+        "not_because_but_because"
+      ],
+      "detectors": [
+        {
+          "id": "its_not_just_x_its_y",
+          "re": "(?i)\\bit'?s not (?:just|only|merely|simply) [^.!?\\n]{2,90}[;,.]\\s*it'?s\\b"
+        },
+        {
+          "id": "does_not_mean_it_means",
+          "re": "(?i)\\b(?:does not|doesn'?t|did not|didn'?t) mean\\b[^.!?\\n]{2,90}[.!?]\\s+(?:it|this|that) means\\b"
+        },
+        {
+          "id": "clipped_negative_tail",
+          "re": "(?i),\\s+no (?:guessing|guesswork|fuss|hassle|surprises|questions asked|strings attached)\\b"
+        }
+      ],
+      "keep_when": "The negative half corrects a belief the reader actually holds, or both halves carry information.",
+      "fixtures": [
+        {
+          "before": "It's not just about the beat riding under the vocals; it's part of the aggression and atmosphere. It's not merely a song, it's a statement.",
+          "after": "The heavy beat makes the song sound more aggressive."
+        },
+        {
+          "before": "This does not mean every choice is equal. It means there is no external system that confirms which choice is right.",
+          "after": "The choices differ, but no outside system will tell you which one is right."
+        },
+        {
+          "before": "The options come from the selected item, no guessing.",
+          "after": "The options come from the selected item, so the user does not have to guess."
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "id": "one_line_closers",
+      "name": "One-line closers and dramatic fragments",
+      "strength": "strong",
+      "detect": "regex",
+      "tells": [
+        "full_stop",
+        "let that sink in",
+        "read that again",
+        "in summary",
+        "in conclusion"
+      ],
+      "detectors": [
+        {
+          "id": "the_real_win",
+          "re": "(?i)\\bthat(?: is|'s) the real (?:win|point|story|lesson|question)\\b"
+        },
+        {
+          "id": "pause_on_this",
+          "re": "(?i)\\bthat distinction matters\\b"
+        },
+        {
+          "id": "negative_fragment_row",
+          "re": "(?:\\bNo [^.!?\\n]{2,40}\\.\\s+){2}"
+        },
+        {
+          "id": "verdict_restated",
+          "re": "(?im)^(?:overall|ultimately),\\s"
+        }
+      ],
+      "keep_when": "The short line adds a fact or consequence the paragraph before it does not show.",
+      "fixtures": [
+        {
+          "before": "Then AlphaEvolve arrived. It had no preference for symmetry. No aesthetic prior. No nostalgia for human taste. The old rules were gone.",
+          "after": "AlphaEvolve had no preference for symmetry or for designs that look human-made, so the old rules stopped applying."
+        },
+        {
+          "before": "Caching cuts repeat work.\n\nThat is the real win.\n\nRetries hide brief outages.\n\nThat is the real win.",
+          "after": "Caching cuts repeat work.\n\nRetries hide brief outages."
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "id": "deep_sayings",
+      "name": "Sayings that sound deep",
+      "strength": "strong",
+      "detect": "regex",
+      "tells": [
+        "aphorism_x_is_the_y_of_z",
+        "at its core",
+        "the real question is",
+        "the deeper issue",
+        "the heart of the matter"
+      ],
+      "detectors": [
+        {
+          "id": "hidden_truth_phrase",
+          "re": "(?i)\\bwhat really matters\\b"
+        },
+        {
+          "id": "is_the_language_of",
+          "re": "(?i)\\bis the (?:language|currency|architecture) of\\b"
+        },
+        {
+          "id": "becomes_a_trap",
+          "re": "(?i)\\bbecomes a trap\\b"
+        }
+      ],
+      "keep_when": "Never as dressing; replace the saying with the specific claim.",
+      "fixtures": [
+        {
+          "before": "The real question is whether teams can adapt. At its core, what really matters is organizational readiness.",
+          "after": "The question is whether teams can adapt. That mostly depends on whether the organization is ready to change its habits."
+        },
+        {
+          "before": "Symmetry is the language of trust. Efficiency becomes a trap when teams forget the human layer.",
+          "after": "Symmetric layouts often feel more predictable to users. Teams can over-optimize workflows and miss how people use them."
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "id": "staged_run_up",
+      "name": "Staged run-up before the point",
+      "strength": "strong",
+      "detect": "regex",
+      "tells": [
+        "heres_the",
+        "lets_be_honest",
+        "the_best_part",
+        "the_result_q",
+        "picture_this",
+        "hot_take",
+        "pro_tip",
+        "let's dive in",
+        "dive into",
+        "deep dive into",
+        "without further ado",
+        "buckle up",
+        "here's the kicker"
+      ],
+      "detectors": [
+        {
+          "id": "lets_explore",
+          "re": "(?i)\\blet'?s (?:explore|unpack|break (?:this|it) down)\\b"
+        },
+        {
+          "id": "what_you_need_to_know",
+          "re": "(?i)\\bhere'?s what you need to know\\b"
+        },
+        {
+          "id": "staged_candor",
+          "re": "(?:^|[.!?]\\s)(?:Honestly\\?|Real talk[.:])"
+        },
+        {
+          "id": "the_part",
+          "re": "(?i)\\bthe (?:hard|slow|new|tricky|interesting) part is\\b|\\bthe part (?:that (?:matters|doesn'?t)|worth)\\b"
+        }
+      ],
+      "keep_when": "'Honestly' or 'look' inside a casual sentence is ordinary, and a literal part (of an upload, of a build) is not a tell.",
+      "fixtures": [
+        {
+          "before": "Let's dive into how caching works in Next.js. Here's what you need to know.",
+          "after": "Next.js caches data at multiple layers, including request memoization, the data cache, and the router cache."
+        },
+        {
+          "before": "Is it worth the price? Honestly? It depends on how often you'll use it.",
+          "after": "Whether it's worth the price depends on how often you'll use it."
+        },
+        {
+          "before": "Sharing one build folder nearly works. This post is about the part that doesn't. The slow part is the dependencies.",
+          "after": "Sharing one build folder saves space, but one checkout can end up running another checkout's code. Most of the build time goes to the dependencies."
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "id": "arguing_with_no_one",
+      "name": "Arguing with no one",
+      "strength": "strong",
+      "detect": "regex",
+      "detectors": [
+        {
+          "id": "this_isnt_about",
+          "re": "(?i)\\bthis isn'?t (?:mainly |really |just )?about\\b"
+        },
+        {
+          "id": "im_not_saying",
+          "re": "(?i)\\bI'?m not (?:saying|arguing)\\b|\\bdon'?t get me wrong\\b|\\bthis is not to say\\b"
+        },
+        {
+          "id": "fake_alternative",
+          "re": "(?i)\\b(?:a tempting|an obvious) approach would be\\b|\\bone might be tempted to\\b|\\bit would be easy to just\\b"
+        }
+      ],
+      "keep_when": "The text attributes the objection or answers it in full, or the rejected option is one a reader would really weigh.",
+      "fixtures": [
+        {
+          "before": "This isn't mainly about prompt length, and I'm not arguing that documentation doesn't matter. You could categorize the problem another way, but the issue is whether the agent can use the instruction when it acts.",
+          "after": "The issue is whether the agent can use the instruction when it acts."
+        },
+        {
+          "before": "Session tokens are rotated every 24 hours. A tempting approach would be to rotate them by restarting the auth service on a cron job, but that would drop every active session. Rotation happens in place, and clients refresh transparently.",
+          "after": "Session tokens rotate in place every 24 hours, and clients refresh transparently."
+        }
+      ]
+    },
+    {
+      "n": 6,
+      "id": "forced_triads",
+      "name": "Forced triads",
+      "strength": "strong",
+      "detect": "regex",
+      "tells": [
+        "rule_of_three_density"
+      ],
+      "detectors": [
+        {
+          "id": "triad_pair",
+          "min_hits": 2,
+          "re": "\\b[\\w'’-]+(?: [\\w'’-]+)?, [\\w'’-]+(?: [\\w'’-]+)?,? and [\\w'’-]+"
+        }
+      ],
+      "keep_when": "The meaning really has three distinct items. Paragraph-scale triads (three parallel examples) need judgement.",
+      "fixtures": [
+        {
+          "before": "The event features keynote sessions, panel discussions, and networking opportunities. Attendees can expect innovation, inspiration, and industry insights.",
+          "after": "The event includes talks and panels, with time for informal networking between sessions."
+        }
+      ]
+    },
+    {
+      "n": 7,
+      "id": "repeated_openings",
+      "name": "Repeated sentence openings",
+      "strength": "strong",
+      "detect": "regex",
+      "detectors": [
+        {
+          "id": "same_subject_run",
+          "re": "\\b(She|He|They|We|It|This) [^.!?\\n]{1,80}[.!?]\\s+\\1 [^.!?\\n]{1,80}[.!?]\\s+\\1 "
+        }
+      ],
+      "keep_when": "The repetition is deliberate rhythm ('She came. She saw. She conquered.').",
+      "fixtures": [
+        {
+          "before": "She noted the door. She noted the lock on it. She filed both away.",
+          "after": "She noted the door and its lock, then filed both away."
+        }
+      ]
+    },
+    {
+      "n": 8,
+      "id": "dashes",
+      "name": "Dashes as the universal connector",
+      "strength": "weak",
+      "detect": "regex",
+      "tells": [
+        "em_dash_density"
+      ],
+      "detectors": [
+        {
+          "id": "dash_connector",
+          "on": "body",
+          "re": "—|–| -- "
+        }
+      ],
+      "keep_when": "The writer's own samples use dashes; then match their rate. One dash is ordinary editing.",
+      "fixtures": [
+        {
+          "before": "The new policy — announced without warning — affects thousands of workers. The changes -- long overdue according to critics -- will take effect immediately.",
+          "after": "The new policy, announced without warning, affects thousands of workers. The changes, long overdue according to critics, will take effect immediately."
+        }
+      ]
+    },
+    {
+      "n": 9,
+      "id": "stacked_qualifiers",
+      "name": "Stacked qualifiers",
+      "strength": "weak",
+      "detect": "regex",
+      "detectors": [
+        {
+          "id": "double_hedge",
+          "re": "(?i)\\b(?:could|might|may) (?:potentially|possibly|arguably|conceivably)\\b|\\bit could (?:potentially |possibly )*be argued\\b"
+        }
+      ],
+      "keep_when": "The source supports the doubt, or it is a scope statement, a legal or safety notice, or a real correction.",
+      "fixtures": [
+        {
+          "before": "It could potentially possibly be argued that the policy might have some effect on outcomes.",
+          "after": "The policy may affect outcomes."
+        }
+      ]
+    },
+    {
+      "n": 10,
+      "id": "hyphenated_pairs",
+      "name": "Hyphenated pairs everywhere",
+      "strength": "weak",
+      "detect": "regex",
+      "detectors": [
+        {
+          "id": "hyphen_after_noun",
+          "re": "(?i)\\b(?:is|are|was|were) (?:high-quality|well-known|well-documented|long-term|real-time|client-facing)(?=[.,;]| and\\b)"
+        }
+      ],
+      "keep_when": "The compound sits before its noun, or the dictionary always hyphenates it (third-party, cross-functional).",
+      "fixtures": [
+        {
+          "before": "The report is high-quality, the process is well-documented, and the plan is long-term.",
+          "after": "The report is high quality, the process is well documented, and the plan is long term."
+        }
+      ]
+    },
+    {
+      "n": 11,
+      "id": "passive_missing_subject",
+      "name": "Passive voice and missing subjects",
+      "strength": "weak",
+      "detect": "judgement",
+      "keep_when": "The actor is unknown or beside the point."
+    },
+    {
+      "n": 12,
+      "id": "overused_ai_words",
+      "name": "Overused AI words",
+      "strength": "strong",
+      "detect": "regex",
+      "kinds": [
+        "lex_t1",
+        "lex_t2"
+      ],
+      "detectors": [
+        {
+          "id": "ai_vocabulary",
+          "re": "(?i)\\b(?:testament|meticulous(?:ly)?|interplay|bolstered|garner(?:s|ed|ing)?|underscor(?:es|ed|ing))\\b"
+        }
+      ],
+      "keep_when": "A technical use (a gated rollout, a robust estimator) or a formal word outside the list.",
+      "fixtures": [
+        {
+          "before": "Additionally, a distinctive feature of Somali cuisine is the incorporation of camel meat. An enduring testament to Italian colonial influence is the widespread adoption of pasta in the local culinary landscape, showcasing how these dishes have integrated into the traditional diet.",
+          "after": "Somali cuisine also includes camel meat, which is considered a delicacy. Pasta dishes, introduced during Italian colonization, remain common, especially in the south."
+        }
+      ]
+    },
+    {
+      "n": 13,
+      "id": "inflated_significance",
+      "name": "Inflated significance",
+      "strength": "strong",
+      "detect": "regex",
+      "tells": [
+        "the_future_is",
+        "exciting_times",
+        "only_time_will_tell",
+        "pivotal moment",
+        "pivotal role",
+        "crucial role",
+        "vital role",
+        "marked a significant",
+        "significant milestone",
+        "evolving landscape",
+        "indelible mark",
+        "enduring legacy",
+        "sets the stage for",
+        "a testament to",
+        "testament to the",
+        "paves the way",
+        "a beacon of",
+        "a catalyst for",
+        "cornerstone of"
+      ],
+      "detectors": [
+        {
+          "id": "legacy_and_stage",
+          "re": "(?i)\\blasting legacy\\b|\\bsetting the stage for\\b|\\bplays? a key role\\b"
+        },
+        {
+          "id": "broader_movement",
+          "re": "(?i)\\breflects a broader\\b|\\bpart of a broader (?:movement|trend|shift)\\b"
+        },
+        {
+          "id": "challenges_and_outlook",
+          "re": "(?i)\\bdespite these challenges\\b|\\bcontinues to thrive\\b|\\bthe future looks bright\\b"
+        }
+      ],
+      "keep_when": "The source itself states the significance or the plans.",
+      "fixtures": [
+        {
+          "before": "The Statistical Institute of Catalonia was officially established in 1989, marking a pivotal moment in the evolution of regional statistics in Spain. This initiative was part of a broader movement across Spain to decentralize administrative functions and enhance regional governance.",
+          "after": "The Statistical Institute of Catalonia was established in 1989 as part of a wider move across Spain to decentralize government work."
+        },
+        {
+          "before": "Despite its industrial prosperity, Korattur faces challenges typical of urban areas, including traffic congestion and water scarcity. Despite these challenges, with its strategic location and ongoing initiatives, Korattur continues to thrive as an integral part of Chennai's growth.",
+          "after": "Korattur has recurring traffic congestion and water shortages."
+        },
+        {
+          "before": "The future looks bright for the company. Exciting times lie ahead as they continue their journey toward excellence."
+        }
+      ]
+    },
+    {
+      "n": 14,
+      "id": "vague_association",
+      "name": "Vague connection or association",
+      "strength": "strong",
+      "detect": "judgement",
+      "keep_when": "The real relationship is unknown; then the vague wording is the honest one."
+    },
+    {
+      "n": 15,
+      "id": "shallow_ing",
+      "name": "Shallow -ing phrases",
+      "strength": "strong",
+      "detect": "regex",
+      "detectors": [
+        {
+          "id": "comma_ing_tail",
+          "re": "(?i),\\s+(?:highlighting|underscoring|emphasi[sz]ing|reflecting|symboli[sz]ing|showcasing|fostering|cultivating|encompassing)\\b"
+        }
+      ],
+      "keep_when": "The source supports what the -ing phrase claims.",
+      "fixtures": [
+        {
+          "before": "The temple's color palette of blue, green, and gold resonates with the region's natural beauty, symbolizing Texas bluebonnets, the Gulf of Mexico, and the diverse Texan landscapes, reflecting the community's deep connection to the land.",
+          "after": "The temple is painted blue, green, and gold to evoke Texas bluebonnets and the Gulf of Mexico."
+        }
+      ]
+    },
+    {
+      "n": 16,
+      "id": "sales_language",
+      "name": "Sales language",
+      "strength": "strong",
+      "detect": "regex",
+      "detectors": [
+        {
+          "id": "brochure_phrase",
+          "re": "(?i)\\b(?:natural beauty|diverse array|rich heritage)\\b"
+        }
+      ],
+      "keep_when": "A literal use (a renowned-by-name award, ground actually broken).",
+      "fixtures": [
+        {
+          "before": "Nestled within the breathtaking region of Gonder in Ethiopia, Alamata Raya Kobo stands as a vibrant town with a rich cultural heritage and stunning natural beauty.",
+          "after": "Alamata Raya Kobo is a town in the Gonder region of Ethiopia."
+        }
+      ],
+      "tells": [
+        "nestled",
+        "breathtaking",
+        "must-visit",
+        "in the heart of",
+        "rich cultural heritage",
+        "rich history",
+        "hidden gem",
+        "bustling",
+        "renowned",
+        "groundbreaking"
+      ]
+    },
+    {
+      "n": 17,
+      "id": "borrowed_authority",
+      "name": "Borrowed authority",
+      "strength": "strong",
+      "detect": "regex",
+      "detectors": [
+        {
+          "id": "unnamed_experts",
+          "re": "(?i)\\b(?:experts|observers|some critics) (?:argue|believe|agree|say|suggest|have (?:cited|noted))\\b|\\bindustry reports\\b"
+        },
+        {
+          "id": "prestige_list",
+          "re": "\\b(?:cited|featured|profiled) in (?:[A-Z][\\w.]*(?: [A-Z][\\w.]*)*, ){2}"
+        },
+        {
+          "id": "social_presence",
+          "re": "(?i)\\bactive social media presence\\b"
+        }
+      ],
+      "keep_when": "The source is named and what it said is stated. A missing citation alone is not a tell.",
+      "fixtures": [
+        {
+          "before": "Due to its unique characteristics, the Haolai River is of interest to researchers and conservationists. Experts believe it plays a crucial role in the regional ecosystem.",
+          "after": "Researchers and conservationists study the Haolai River, often called the narrowest river in the world: it averages about 15 centimeters wide."
+        },
+        {
+          "before": "Her views have been cited in The New York Times, BBC, Financial Times, and The Hindu. She maintains an active social media presence with over 500,000 followers.",
+          "after": "In a 2024 New York Times interview, she argued that AI regulation should focus on outcomes rather than methods."
+        }
+      ]
+    },
+    {
+      "n": 18,
+      "id": "avoiding_is",
+      "name": "Avoiding is, are, and has",
+      "strength": "strong",
+      "detect": "regex",
+      "detectors": [
+        {
+          "id": "serves_as",
+          "re": "(?i)\\b(?:serves?|stands?|functions?) as\\b"
+        }
+      ],
+      "keep_when": "The longer verb carries meaning 'is' would lose (a function that serves as the fallback).",
+      "fixtures": [
+        {
+          "before": "Gallery 825 serves as LAAA's exhibition space for contemporary art. The gallery features four separate spaces and boasts over 3,000 square feet.",
+          "after": "Gallery 825 is LAAA's exhibition space for contemporary art. It has four separate spaces and more than 3,000 square feet."
+        }
+      ],
+      "tells": [
+        "serves as a",
+        "stands as a",
+        "boasts"
+      ]
+    },
+    {
+      "n": 19,
+      "id": "bold_decoration",
+      "name": "Bold as decoration",
+      "strength": "strong",
+      "detect": "regex",
+      "tells": [
+        "bold_overuse",
+        "bold_header_bullet"
+      ],
+      "keep_when": "The bold marks the one thing the reader must not miss.",
+      "fixtures": [
+        {
+          "before": "It blends **OKRs (Objectives and Key Results)**, **KPIs (Key Performance Indicators)**, and visual strategy tools such as the **Business Model Canvas (BMC)** and **Balanced Scorecard (BSC)**.",
+          "after": "It blends OKRs, KPIs, and visual strategy tools like the Business Model Canvas and Balanced Scorecard."
+        },
+        {
+          "before": "- **User Experience:** The user experience has been significantly improved with a new interface.\n- **Performance:** Performance has been enhanced through optimized algorithms.\n- **Security:** Security has been strengthened with end-to-end encryption.",
+          "after": "The update adds a new interface, faster algorithms, and end-to-end encryption."
+        }
+      ]
+    },
+    {
+      "n": 20,
+      "id": "decorative_headings",
+      "name": "Decorative headings",
+      "strength": "strong",
+      "detect": "regex",
+      "tells": [
+        "title_case_headings",
+        "arrow_emoji_bullet"
+      ],
+      "detectors": [
+        {
+          "id": "emoji_label_line",
+          "on": "body",
+          "min_hits": 2,
+          "re": "(?m)^[^\\w\\s#>*`-]\\s*\\*\\*[^*\\n]+:\\*\\*"
+        }
+      ],
+      "keep_when": "A template or style guide the document follows asks for title case.",
+      "fixtures": [
+        {
+          "before": "## Strategic Negotiations And Global Partnerships",
+          "after": "## Strategic negotiations and global partnerships"
+        },
+        {
+          "before": "🚀 **Launch Phase:** The product launches in Q3\n💡 **Key Insight:** Users prefer simplicity",
+          "after": "The product launches in Q3. Users prefer simplicity."
+        }
+      ]
+    },
+    {
+      "n": 21,
+      "id": "curly_quotes",
+      "name": "Curly quotation marks",
+      "strength": "weak",
+      "detect": "regex",
+      "tells": [
+        "curly_quotes"
+      ],
+      "keep_when": "The target format or the writer's editor curls quotes.",
+      "fixtures": [
+        {
+          "before": "He said “the project is on track” but others disagreed.",
+          "after": "He said \"the project is on track\" but others disagreed."
+        }
+      ]
+    },
+    {
+      "n": 22,
+      "id": "chatbot_residue",
+      "name": "Chatbot residue",
+      "strength": "strong",
+      "detect": "regex",
+      "tells": [
+        "chatbot_artifact",
+        "certainly_opener"
+      ],
+      "detectors": [
+        {
+          "id": "assistant_wrapper",
+          "re": "(?i)\\b(?:I hope this helps|great question|you'?re absolutely right|let me know if you'?d like me to|would you like me to|should I continue\\?)"
+        }
+      ],
+      "keep_when": "A plain salutation, sign-off or 'let me know' in a message; those predate chatbots.",
+      "fixtures": [
+        {
+          "before": "Great question! Here is an overview of the French Revolution. It began in 1789 when a financial crisis and food shortages led to widespread unrest. I hope this helps! Let me know if you'd like me to expand on any section.",
+          "after": "The French Revolution began in 1789 when a financial crisis and food shortages led to widespread unrest."
+        }
+      ]
+    },
+    {
+      "n": 23,
+      "id": "knowledge_limit",
+      "name": "Knowledge-limit disclaimers and guesses",
+      "strength": "strong",
+      "detect": "regex",
+      "tells": [
+        "knowledge_cutoff"
+      ],
+      "detectors": [
+        {
+          "id": "source_gap_disclaimer",
+          "re": "(?i)\\b(?:up to my last (?:training )?update|while specific details (?:are|about)|based on available information|not (?:publicly available|widely documented|extensively documented)|maintains a low profile|it is believed that)\\b"
+        },
+        {
+          "id": "plausible_guess",
+          "re": "(?i)\\b(?:she|he|they) likely (?:grew up|studied|began)\\b"
+        }
+      ],
+      "keep_when": "Never; state what the source does not show, or cut the sentence.",
+      "fixtures": [
+        {
+          "before": "While specific details about the company's founding are not extensively documented in readily available sources, it appears to have been established sometime in the 1990s.",
+          "after": "The sources do not give the company's founding date."
+        },
+        {
+          "before": "Information about her early life is not publicly available, suggesting she maintains a low profile. She likely grew up in a middle-class household, which shaped her later interest in education reform.",
+          "after": "The sources say nothing about her early life."
+        }
+      ]
+    },
+    {
+      "n": 24,
+      "id": "heading_restated",
+      "name": "A heading repeated in the first sentence",
+      "strength": "strong",
+      "detect": "judgement",
+      "keep_when": "Never; the heading already said it."
+    },
+    {
+      "n": 25,
+      "id": "writing_about_document",
+      "name": "Writing about the document instead of its subject",
+      "strength": "weak",
+      "detect": "regex",
+      "detectors": [
+        {
+          "id": "self_description",
+          "re": "(?i)\\bwas added to replace\\b|\\b(?:the table|the figures?|the list) below (?:compares?|shows?|are drawn|is drawn)\\b|\\bthis section is organi[sz]ed by\\b|\\bflagged rather than guessed\\b"
+        }
+      ],
+      "keep_when": "Change logs, release notes and migration guides; a source credit the reader can follow; a caveat that changes what the reader should do.",
+      "fixtures": [
+        {
+          "before": "This function was added to replace the previous approach of iterating through all items, which caused O(n²) performance.",
+          "after": "This function uses a hash map for O(1) lookups, avoiding the O(n²) cost of iterating through every item."
+        },
+        {
+          "before": "The figures below are drawn from each vendor's published pricing; anything we could not confirm is flagged rather than guessed.",
+          "after": "Prices are each vendor's published rate. Two vendors publish nothing; call them."
+        }
+      ]
+    },
+    {
+      "n": 26,
+      "id": "wrong_reader",
+      "name": "Re-explaining what the reader knows",
+      "strength": "strong",
+      "detect": "judgement",
+      "keep_when": "The reader lacks the context; in a reply, keep only the one fact that would change whether they agree."
+    }
+  ]
+}

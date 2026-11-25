@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+Pattern catalogue: the scanner now names which of 26 AI-default patterns a draft shows, and a voice can switch off the ones its person really uses.
+
+- **`data/patterns.json` (new)** — the 26 patterns of [blader/humanizer](https://github.com/blader/humanizer) v4.0.0 (MIT) as data: an index over the existing tells plus single-sighting detectors, each with a strength, a keep-when guard and before/after fixtures. Four patterns have no honest regex and are marked `detect: judgement`.
+- **`scan` reports `patterns`** — each hit carries `actionable`: a strong pattern on one sighting, a weak one only beside an unrelated second pattern. The score is unchanged, so the bench calibration holds.
+- **`conform` fails on an actionable pattern** unless the profile's new optional `allow` list names it. The five shipped sample drafts still pass.
+- **`selftest`** — every fixture "before" must hit its pattern and every "after" must not.
+- Measured on 4105 human-written work comments: 1.3% carry an actionable pattern.
+
 ## 0.2.0 — 2026-07-08
 
 Competence + soul: voices now carry an epistemic range and a dial-able emotional layer, and both casting and verification are aware of them.

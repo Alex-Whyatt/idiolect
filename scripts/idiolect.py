@@ -43,6 +43,7 @@ ROOT = os.path.dirname(SCRIPT_DIR)
 DATA_DIR = os.path.join(ROOT, "data")
 VOICES_DIR = os.path.join(ROOT, "voices")
 TELLS_PATH = os.path.join(DATA_DIR, "tells.json")
+PATTERNS_PATH = os.path.join(DATA_DIR, "patterns.json")
 
 HOME = os.environ.get("IDIOLECT_HOME") or os.path.join(
     os.path.expanduser("~"), ".claude", "idiolect")
@@ -404,6 +405,56 @@ def line_of(text, pos):
     return text.count("\n", 0, pos) + 1
 
 
+METRIC_TELL_IDS = (
+    "em_dash_density", "uniform_sentences", "uniform_paragraphs", "long_sentences",
+    "rule_of_three_density", "staccato_drama", "hedge_pileup", "emoji_density",
+    "hashtag_pile", "bold_overuse", "title_case_headings", "exclamation_uniformity",
+    "both_sides_seesaw", "curly_quotes")
+
+
+def load_patterns():
+    with open(PATTERNS_PATH, encoding="utf-8") as f:
+        return json.load(f)["patterns"]
+
+
+def known_tell_ids(tells):
+    lexical = {item["p"] for tier in tells["lexical"].values() for item in tier}
+    return {c["id"] for c in tells["constructions"]} | set(METRIC_TELL_IDS) | lexical
+
+
+def pattern_hits(body, masked, hits, patterns=None):
+    """Groups scan hits and the catalogue's own detectors under named patterns.
+
+    A strong pattern is actionable on one sighting; a weak one only when an
+    unrelated second pattern is present. Nothing here feeds the scan score.
+    """
+    patterns = patterns or load_patterns()
+    claimed = {tid for p in patterns for tid in p.get("tells", ())}
+    found = []
+    for p in patterns:
+        via, count, lines = [], 0, []
+        for h in hits:
+            unclaimed_kind = h["id"] not in claimed and h["kind"] in p.get("kinds", ())
+            if h["id"] in p.get("tells", ()) or unclaimed_kind:
+                via.append(h["id"])
+                count += h["count"]
+                lines.extend(h["lines"])
+        for d in p.get("detectors", ()):
+            target = body if d.get("on") == "body" else masked
+            matches = list(re.finditer(d["re"], target))
+            if matches and len(matches) >= d.get("min_hits", 1):
+                via.append(d["id"])
+                count += len(matches)
+                lines.extend(line_of(target, m.start()) for m in matches)
+        if via:
+            found.append({"n": p["n"], "id": p["id"], "name": p["name"],
+                          "strength": p["strength"], "via": via, "count": count,
+                          "lines": sorted(set(lines))[:6]})
+    for f in found:
+        f["actionable"] = f["strength"] == "strong" or len(found) >= 2
+    return found
+
+
 def _stem(t):
     """Tiny plural/possessive stemmer for topical matching (pick), not linguistics."""
     t = t.lower().rstrip("'’")
@@ -427,7 +478,7 @@ PLATFORM_ADJUST = {
 }
 
 
-def scan_text(text, platform=None, tells=None):
+def scan_text(text, platform=None, tells=None, patterns=None):
     tells = tells or load_tells()
     cfg = tells["scoring"]
     body = strip_code(text)
@@ -593,7 +644,9 @@ def scan_text(text, platform=None, tells=None):
     rep = {
         "score": score, "band": band, "raw_points": round(raw, 1),
         "cluster_categories": ncat, "cluster_multiplier": mult,
-        "platform": platform, "hits": hits, "human_texture": texture,
+        "platform": platform, "hits": hits,
+        "patterns": pattern_hits(body, masked, hits, patterns),
+        "human_texture": texture,
         "stats": stats,
         "disclaimer": "linter for drafts, not a detector for accusing people",
     }
@@ -619,6 +672,12 @@ def fmt_scan(rep):
             lines.append(f"  … and {len(rep['hits']) - 25} more")
     else:
         lines.append("tells: none")
+    if rep["patterns"]:
+        lines.append("patterns:")
+        for p in rep["patterns"]:
+            loc = f" @L{','.join(map(str, p['lines']))}" if p["lines"] else ""
+            act = "act" if p["actionable"] else "weak alone"
+            lines.append(f"  §{p['n']} {p['name']} [{act}] via {', '.join(p['via'])}{loc}")
     tx = rep["human_texture"]
     lines.append("human texture: " + (", ".join(f"{t['label']} x{t['count']}" for t in tx)
                                       if tx else "NONE — no specifics, no anchors, no first-person actions"))
@@ -852,6 +911,22 @@ def voice_distance(a, b):
 
 # ---------------------------------------------------------------- conform
 
+def allowed_patterns(fm):
+    """The patterns this voice uses on purpose: its allow list, plus dashes when its stylo keeps them."""
+    allowed = {str(a) for a in fm.get("allow") or []}
+    if fm["stylo"].get("em_dash") not in ("never", "rare"):
+        allowed.add("dashes")
+    return allowed
+
+
+def pattern_violations(text, fm, platform=None):
+    allowed = allowed_patterns(fm)
+    return [f"pattern §{p['n']} {p['name']} (via {', '.join(p['via'])}; "
+            f"add {p['id']!r} to the profile's allow list if the writer does this)"
+            for p in scan_text(text, platform)["patterns"]
+            if p["actionable"] and p["id"] not in allowed]
+
+
 def conform_text(text, fm, platform=None):
     stats = text_stats(text)
     sy = fm["stylo"]
@@ -913,6 +988,7 @@ def conform_text(text, fm, platform=None):
             violations.append("never-rule broken: bullet list present")
         if "header" in r and re.search(r"(?m)^#{1,4}\s", text):
             violations.append("never-rule broken: headers present")
+    violations.extend(pattern_violations(text, fm, platform))
     comp = fm.get("competence") or {}
     comp_flags = []
     outsider = comp.get("outsider") or []
@@ -1634,6 +1710,47 @@ def cmd_selftest(_args):
       json.dumps(rep, indent=1)[:300])
     rep2 = conform_text(SLOP_SNIPPET, fm_v)
     t("conform: slop fails it", not rep2["pass"])
+
+    # pattern catalogue
+    patterns = load_patterns()
+    t("patterns: 26 numbered without gaps", [p["n"] for p in patterns] == list(range(1, 27)))
+    known = known_tell_ids(load_tells())
+    unknown = [f"{p['id']}:{tid}" for p in patterns for tid in p.get("tells", [])
+               if tid not in known]
+    t("patterns: every referenced tell exists", not unknown, str(unknown))
+    unfixtured = [p["id"] for p in patterns
+                  if p["detect"] == "regex" and not p.get("fixtures")]
+    t("patterns: every detectable pattern carries a fixture", not unfixtured, str(unfixtured))
+
+    def found_in(text):
+        return {p["id"] for p in scan_text(text)["patterns"]}
+
+    missed = [f"{p['id']}#{i}" for p in patterns
+              for i, fx in enumerate(p.get("fixtures", []))
+              if p["id"] not in found_in(fx["before"])]
+    t("patterns: every 'before' fixture hits its pattern", not missed, str(missed))
+    leaked = [f"{p['id']}#{i}" for p in patterns
+              for i, fx in enumerate(p.get("fixtures", []))
+              if "after" in fx and p["id"] in found_in(fx["after"])]
+    t("patterns: no 'after' fixture hits its pattern", not leaked, str(leaked))
+    t("patterns: human snippet has none to act on",
+      not any(p["actionable"] for p in human["patterns"]),
+      str([p["id"] for p in human["patterns"]]))
+
+    curly = "He said “the project is on track” but others disagreed."
+    lone = scan_text(curly)["patterns"]
+    t("patterns: a weak tell alone is not actionable",
+      [p["id"] for p in lone] == ["curly_quotes"] and not lone[0]["actionable"], str(lone))
+    paired = scan_text(curly + " It could potentially be argued that the plan might work.")
+    t("patterns: two unrelated weak tells become actionable",
+      len(paired["patterns"]) == 2 and all(p["actionable"] for p in paired["patterns"]),
+      str(paired["patterns"]))
+
+    tainted = HUMAN_SNIPPET + " let that sink in."
+    t("conform: an actionable pattern fails the draft",
+      not conform_text(tainted, fm_v)["pass"])
+    t("conform: the profile's allow list switches a pattern off",
+      conform_text(tainted, dict(fm_v, allow=["one_line_closers"]))["pass"])
 
     # distance sanity
     a = {"formality": 0.3, "temperament": {c: 0.5 for c in "OCEAN"},
